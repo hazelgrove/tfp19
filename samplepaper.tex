@@ -12,6 +12,8 @@
 % to display URLs in blue roman font according to Springer's eBook style:
 % \renewcommand\UrlFont{\color{blue}\rmfamily}
 
+\input{commands}
+
 \begin{document}
 %
 \title{Contribution Title\thanks{Supported by organization x.}}
@@ -51,7 +53,19 @@ key points
 %
 %
 \section{Introduction}
-\section{Examples introducing design}
+
+\parahead{Paper Outline}
+\begin{itemize}
+\item Sec.~\ref{sec:hazel-background} gives an overview of Hazel
+\item Sec.~\ref{sec:example} gives an example-driven overview of Hazel's structure editor design
+\item Sec.~\ref{sec:related-work} compares our structure editor design with other designs
+\item Sec.~\ref{sec:conclusion} describes future work and concludes
+\end{itemize}
+
+\section{Hazel Background} \label{sec:hazel-background}
+
+\section{Example-Driven Overview} \label{sec:example}
+
 guided by overall text like experience, you want to operate on a tree like structure but enable linear operations as suggested by the layout, doesn't preclude tree operations or tree affordances/signifiers
 \begin{itemize}
 \item text-like cursor, single point of focus, differs from POPL 17 paper
@@ -67,7 +81,9 @@ guided by overall text like experience, you want to operate on a tree like struc
 \item maybe swapping
 \item maybe mention inlining context inspector, put live values in side of code
 \end{itemize}
-\section{Related Work}
+
+\section{Related Work} \label{sec:related-work}
+
 \begin{itemize}
 \item The Cornell Program Synthesizer: A Syntax-Directed Programming Environment by Teitelbaum \& Reps \url{https://core.ac.uk/download/pdf/21750999.pdf}
 \item The Scratch Programming Language and Environment by Maloney et al. \url{https://dl.acm.org/citation.cfm?doid=1868358.1868363}
@@ -88,6 +104,8 @@ guided by overall text like experience, you want to operate on a tree like struc
 \item Hazelnut \url{https://dl.acm.org/citation.cfm?id=3009900}
 \item Hazelnut Live \url{https://dl.acm.org/citation.cfm?id=3290327}
 \end{itemize}
+
+\section{Conclusion} \label{sec:conclusion}
 
 \newpage
 \subsection{A Subsection Sample}
