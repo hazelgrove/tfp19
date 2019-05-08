@@ -3,6 +3,17 @@
 % Version 2.20 of 2017/10/04
 %
 \documentclass[runningheads]{llncs}
+
+\usepackage{todonotes}
+
+\usepackage[T1]{fontenc}
+\usepackage{inconsolata}
+
+\input{hazel-listing.tex}
+
+\usepackage{xspace}
+\newcommand{\Hazel}{\textsf{Hazel}\xspace}
+
 %
 \usepackage{graphicx}
 % Used for displaying a sample figure. If possible, figure files should
@@ -22,15 +33,15 @@
 % If the paper title is too long for the running head, you can set
 % an abbreviated paper title here
 %
-\author{First Author\inst{1}\orcidID{0000-1111-2222-3333} \and
-Second Author\inst{2,3}\orcidID{1111-2222-3333-4444} \and
-Third Author\inst{3}\orcidID{2222--3333-4444-5555}}
+\author{David Moon\inst{1} \and
+Cyrus Omar\inst{2} \and
+R.~Benjamin Shapiro\inst{1}}
 %
 \authorrunning{F. Author et al.}
 % First names are abbreviated in the running head.
 % If there are more than two authors, 'et al.' is used.
 %
-\institute{Princeton University, Princeton NJ 08544, USA \and
+\institute{UnPrinceton University, Princeton NJ 08544, USA \and
 Springer Heidelberg, Tiergartenstr. 17, 69121 Heidelberg, Germany
 \email{lncs@springer.com}\\
 \url{http://www.springer.com/gp/computer-science/lncs} \and
@@ -40,29 +51,143 @@ ABC Institute, Rupert-Karls-University Heidelberg, Heidelberg, Germany\\
 \maketitle              % typeset the header of the contribution
 %
 \begin{abstract}
-key points
-\begin{itemize}
-\item in progress of scaling up usability of core Hazelnut calculus
-\item structure editing eliminates syntax errors, in Hazel enables live computation
-\item we propose a design that marries affordances of linear text and structure trees
-\end{itemize}
+Structure editors allow programmers to edit the tree structure of a program directly.
+They can provide cognitive benefits for novice programmers, simplify language composition, 
+and improve the availability of editor services. They are also known for being hard 
+to use.
 
+We present the structure editor design of \Hazel, a live functional programming
+environment. \Hazel's type-aware edit actions and execution semantics for incomplete programs ensure that every reachable edit state is not only syntactically well-formed, but also statically and dynamically well-defined. This unique invariant of \Hazel adds new motivation to improve the ergonomics of structure editing. 
+
+In our effort to do so, we incorporate a novel \emph{delimited selection mode} to resolve ambiguous user intent when wrapping and unwrapping parent nodes around their children. Just as code completion menus facilitate exploration of valid token completions, delimited selection mode facilitates exploration of valid placements of a syntactic delimiter. It also makes it easy to preserve children nodes when removing their parent. We motivate and describe our design choices, compare our design to prior work, and describe our plan for user evaluation.
+%key points
+%\begin{itemize}
+%\item in progress of scaling up usability of core Hazelnut calculus
+%\item structure editing eliminates syntax errors, in Hazel enables live computation
+%\item we propose a design that marries affordances of linear text and structure trees
+%\end{itemize}
 \keywords{First keyword  \and Second keyword \and Another keyword.}
 \end{abstract}
 %
 %
 %
 \section{Introduction}
-
-\parahead{Paper Outline}
 \begin{itemize}
-\item Sec.~\ref{sec:hazel-background} gives an overview of Hazel
+	\item pros of structure editing
+		\begin{itemize}
+			\item cognitive benefits for novices, e.g., Scratch
+			\item language composition, e.g., MPS/mbeddr
+			\item true liveness, e.g., \Hazel
+		\end{itemize}
+	\item yet not widely adopted
+		\begin{itemize}
+			\item tool integration
+			\item usability
+			\item in this paper, we focus on usability
+		\end{itemize}
+	\item prior work on improving usability for inputting sequences of infix operators
+  	\begin{itemize}
+  		\item early structure editors like Cornell Synthesizer stepped around issue of infix operator sequences by resorting to text editing at leaves
+  		\item other editors leverage a form of online precedence parsing to restructure the tree as needed
+  	\end{itemize}
+	\item comparatively, little innovation on interface for complex node construction and removal, that is, creating a new node that wraps around existing code, and removing a node while preserving or moving its children
+		\begin{itemize}
+			\item we believe interface for such operations in today's structure editors is key contributor to users' negative perceptions of structure editing
+		\end{itemize}
+	\item in a controlled experiment comparing user efficiency for MPS vs a text editor, Berger et al.~\todo{cite} observe that novice users of structure editors perceive selection as inaccurate compared to other operations, and that \emph{both} novice and proficient users of structure editors perceive deletion as inaccurate compared to other operations.
+		\begin{itemize}
+			\item responses to a post-survey questionnaire reveal that structure editor users felt that they often deleted more than they expected, motivating our desire for a better interface for complex deletions
+		\end{itemize}
+	\item meanwhile, selection is essential for node construction in existing structure editors
+		\begin{itemize}
+			\item either the user must select a child node before applying a construction operation or the user must create the node and then select and move existing nodes into it
+			\item thus, usability issues for selection affect node construction as well
+		\end{itemize}
+	\item additionally, we conjecture that node construction is awkward for novice users of structure editors because it inverts the usual order of operations when constructing nodes in text editors
+		\begin{itemize}
+			\item yada yada \todo{coalesce this paragraph with previous paragraph}
+		\end{itemize}
+\end{itemize}
+
+\parahead{Paper Outline} yo
+\begin{itemize}
 \item Sec.~\ref{sec:example} gives an example-driven overview of Hazel's structure editor design
 \item Sec.~\ref{sec:related-work} compares our structure editor design with other designs
 \item Sec.~\ref{sec:conclusion} describes future work and concludes
 \end{itemize}
 
-\section{Hazel Background} \label{sec:hazel-background}
+\newpage
+\setlength{\fboxsep}{0pt}
+\begin{minipage}{\linewidth}
+\begin{lstlisting}
+let str_of_lst : List(Num) @\fnarrow @ String =
+	@\lam @ns.{
+		let str_of_elems = 
+			@\lam @ns.{
+				case ns
+				| []      @\casearrow @ ""                                     |
+				| n :: [] @\casearrow @ str_of_int n                           |
+				| n :: ns @\casearrow @ str_of_int n ++ "," ++ str_of_elems ns |
+				end
+			} 
+		in
+		"[" ++ str_of_elems ns ++ "]"
+	}
+in
+/h/_/h/
+\end{lstlisting}
+\end{minipage}
+
+
+\begin{figure}
+\begin{lstlisting}
+type Tm         -- term
+type Op         -- operator
+type Seq =      -- sequence of infix operators
+| TmOpTm Tm Op Tm
+| SeqOpTm OpSeq Op Tm
+	
+type SeqSurround =                  -- Seq zipper context
+| EmptyPrefix SeqSuffix             --  _ + tm + tm + ...
+| EmptySuffix SeqPrefix             --  ... + tm + tm + _
+| BothNonEmpty SeqPrefix SeqSuffix  --  ... + tm + _ + tm + ...
+and SeqPrefix =
+| TmPrefix Tm Op
+| SeqPrefix Seq Op
+and SeqSuffix =
+| TmSuffix Op Tm
+| SeqSuffix Op Seq
+\end{lstlisting}
+\end{figure}
+
+\begin{minipage}{\linewidth}
+\begin{lstlisting}
+let next_tm : (Tm, SeqSurround) @\fnarrow @ (Tm, SeqSurround) =
+	@\lam @(curr_tm, curr_surround).
+		case surround
+		| EmptySuffix prefix @\casearrow @
+			-- reader, look here --
+			let ( new_tm, new_suffix ) =
+				case prefix
+				| TmPrefix new_tm op @\casearrow @
+					let new_suffix = TmSuffix op curr_tm in
+					( new_tm, new_suffix )
+				| SeqPrefix seq op =>
+					let ( new_z, suffix ) = place_cursor_seq seq in
+					let new_suffix =
+						append_tm_to_suffix suffix op (erase z)
+					in
+					( new_tm, new_suffix )
+				end
+			in
+			@\myboxs{}@( new_z, EmptyPrefix new_suffix )@\myboxe{}@
+		end
+in
+_
+\end{lstlisting}
+\end{minipage}
+
+\newpage
 
 \section{Example-Driven Overview} \label{sec:example}
 

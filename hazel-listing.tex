@@ -1,0 +1,52 @@
+% !TEX root = samplepaper.tex
+
+% from https://tex.stackexchange.com/questions/173695/set-size-of-colorbox-for-a-single-character
+\newcommand{\ColorBox}[2]{\colorbox{#1}{\makebox[\width]{\strut#2}}}
+\setlength{\fboxsep}{0pt}
+
+\usepackage{listingsutf8}
+\lstdefinelanguage{hazel}{%
+	morekeywords={let,in,case,end,.,|},
+	sensitive=false,
+	morecomment=[l]{--},
+}
+\usepackage{color}
+\definecolor{comment}{RGB}{128,128,128}
+\definecolor{stringColor}{RGB}{147,112,219}
+\lstset{%
+	language=hazel,
+	numbers=left,
+	numberstyle=\tiny\ttfamily,
+	basicstyle=\small\ttfamily\linespread{0.8},
+	tabsize=2,
+	keywordstyle=\bfseries,
+	commentstyle=\bfseries\color{comment},
+	morestring=[d]{"},
+	stringstyle=\color{stringColor},
+	showstringspaces=false,
+	mathescape,
+	frame=trbl,
+	rulecolor=\color{comment},
+	escapeinside={@}{@},
+	moredelim=[is][\ColorBox{red}]{/h/}{/h/},
+}
+
+\usepackage{bm}
+\newcommand{\fnarrow}{$\bm{\rightarrow}$}
+\newcommand{\lam}{$\bm{\lambda}$}
+\newcommand{\casearrow}{$\bm{\Rightarrow}$}
+
+
+\usepackage{tikz}
+
+\usetikzlibrary{decorations.text}
+
+\newcommand\myboxs[1]{\tikz[remember picture,overlay]\node(mk1){};}
+
+\newcommand\myboxe[1]%
+{
+\tikz[remember picture,overlay]\node(mk2){};
+\begin{tikzpicture}[remember picture,overlay]
+\draw[green,dashed]([shift={(-2pt,1.5ex)}]mk1)rectangle([shift={(1pt,-0.5ex)}]mk2);
+\end{tikzpicture}
+}
