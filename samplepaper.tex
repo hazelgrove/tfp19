@@ -4,6 +4,7 @@
 %
 \documentclass[runningheads]{llncs}
 
+\usepackage{amsmath}
 \usepackage{todonotes}
 
 \usepackage[T1]{fontenc}
@@ -41,12 +42,13 @@ R.~Benjamin Shapiro\inst{1}}
 % First names are abbreviated in the running head.
 % If there are more than two authors, 'et al.' is used.
 %
-\institute{UnPrinceton University, Princeton NJ 08544, USA \and
-Springer Heidelberg, Tiergartenstr. 17, 69121 Heidelberg, Germany
-\email{lncs@springer.com}\\
-\url{http://www.springer.com/gp/computer-science/lncs} \and
-ABC Institute, Rupert-Karls-University Heidelberg, Heidelberg, Germany\\
-\email{\{abc,lncs\}@uni-heidelberg.de}}
+\institute{University of Colorado Boulder, Boulder CO 80309, USA\and
+University of Chicago, Chicago IL 60637, USA}
+%Springer Heidelberg, Tiergartenstr. 17, 69121 Heidelberg, Germany
+%\email{lncs@springer.com}\\
+%\url{http://www.springer.com/gp/computer-science/lncs} \and
+%ABC Institute, Rupert-Karls-University Heidelberg, Heidelberg, Germany\\
+%\email{\{abc,lncs\}@uni-heidelberg.de}}
 %
 \maketitle              % typeset the header of the contribution
 %
@@ -111,16 +113,254 @@ In our effort to do so, we incorporate a novel \emph{delimited selection mode} t
 
 \parahead{Paper Outline} yo
 \begin{itemize}
-\item Sec.~\ref{sec:example} gives an example-driven overview of Hazel's structure editor design
+\item Sec.~\ref{sec:example} gives an example-driven overview of \Hazel's structure editor design
 \item Sec.~\ref{sec:related-work} compares our structure editor design with other designs
 \item Sec.~\ref{sec:conclusion} describes future work and concludes
 \end{itemize}
 
-\newpage
-\setlength{\fboxsep}{0pt}
-\begin{minipage}{\linewidth}
-\begin{lstlisting}
-let str_of_lst : List(Num) @\fnarrow @ String =
+\section{Design} \label{sec:example}
+
+\subsection{Example}
+
+We begin with an example-driven overview of \Hazel's editing mechanics.
+We walk through how one might implement in \Hazel the function \texttt{str\_of\_list},
+which takes a list of numbers and returns its string representation. We
+elide most steps and focus on a few interesting edit transitions.
+
+In the rest of this section, each consecutive pair of programs connected
+visually by a line represents a single edit transition. Text between the
+start and end state of each edit describes the edit and relevant features of
+\Hazel. Elided steps are denoted by ellipses between pairs of programs.
+\todo{add mention of cursor inspector, other editor services we are omitting
+to focus on editing mechanics}
+
+\noindent
+\begin{hazel}
+<h>_</h>
+\end{hazel}
+	\begin{tabular}{|p{\linewidth}}
+	We begin with an empty expression hole.
+	\textcolor{red}{(Add something here about expression holes.)}
+	\textcolor{red}{(Also something about the text-like cursor.)}
+	We would first like to define a variable \texttt{str\_of\_list}, so we begin typing out the keyword
+	\texttt{let}. 
+	\end{tabular}
+\begin{hazel}
+<c>le</c>
+\end{hazel}
+	\begin{tabular}{|p{\linewidth}}
+	As we type, the editor identifies \texttt{le} as an unbound variable and indicates this
+	fact with an orange dotted border.
+	\end{tabular}
+\begin{hazel}
+<c>let</c>
+\end{hazel}
+	\begin{tabular}{|p{\linewidth}}
+	Upon typing out the reserved keyword \texttt{let}, indicated by the bold font, we invoke
+	construction of a let line by hitting Space.
+	\end{tabular}
+\begin{hazel}
+let <c>_</c> = <h>_</h> in
+<h>_</h>
+\end{hazel}
+	\[\vdots\]
+\begin{hazel}
+let <c>str_of_lst</c> = <h>_</h> in
+<h>_</h>
+\end{hazel}
+	\begin{tabular}{|p{\linewidth}}
+	Upon typing out the function name, we hit the Tab key to move our cursor to the next empty hole.
+	\end{tabular}
+\begin{hazel}
+let str_of_lst = <c>_</c> in
+<h>_</h>
+\end{hazel}
+	\begin{tabular}{|p{\linewidth}}
+	We use Backslash to create a lambda expression.
+	\end{tabular}
+\begin{hazel}
+let str_of_lst = @\lam @<c>_</c>.{<h>_</h>} in
+<h>_</h>
+\end{hazel}
+	\[\vdots\]
+\begin{hazel}
+let str_of_lst = @\lam @ns.{<c>case</c>} in
+<h>_</h>
+\end{hazel}
+	\begin{tabular}{|p{\linewidth}}
+	Like \texttt{let}, \texttt{case} is a reserved keyword and can be used to construct
+	a case expression by hitting Space after typing out the word.
+	\end{tabular}
+\begin{hazel}
+let str_of_lst = 
+	@\lam @ns.{
+		case <c>_</c>
+		| <h>_</h> @\casearrow @ <h>_</h> |
+		end
+	}
+in
+<h>_</h>
+\end{hazel}
+	\[\vdots\]
+\begin{hazel}
+let str_of_lst = 
+	@\lam @ns.{
+		case ns
+		| [] @\casearrow @ <c>""</c>
+		end
+	}
+in
+<h>_</h>
+\end{hazel}
+	\begin{tabular}{|p{\linewidth}}
+	Pressing Enter at the end of a \texttt{case} rule creates a new rule.
+	\end{tabular}
+\begin{hazel}
+let str_of_lst = 
+	@\lam @ns.{
+		case ns
+		| [] @\casearrow @ ""
+		| <c>_</c>  @\casearrow @ <h>_</h>
+		end
+	}
+in
+<h>_</h>
+\end{hazel}
+	\[\vdots\]
+\begin{hazel}
+let str_of_lst = 
+	@\lam @ns.{
+		case ns
+		| []      @\casearrow @ ""
+		| n :: [] @\casearrow @ <c>str_of_int</c>
+		end
+	}
+in
+<h>_</h>
+\end{hazel}
+	\begin{tabular}{|p{\linewidth}}
+	Suppose we have the function \texttt{str\_of\_int} in scope.
+	As we fill out the second rule, we encounter a type inconsistency,
+	denoted by the red dotted border around \texttt{str\_of\_int} on
+	Line 5. \Hazel expects the rule to have a return type of \texttt{String}
+	but it has found a value of type \texttt{Num \fnarrow~String} instead.
+	The type inconsistency is resolved once we hit Space to construct
+	a function application.
+	\end{tabular}
+\begin{hazel}
+let str_of_lst = 
+	@\lam @ns.{
+		case ns
+		| []      @\casearrow @ ""
+		| n :: [] @\casearrow @ str_of_int <c>_</c>
+		end
+	}
+in
+<h>_</h>
+\end{hazel}
+	\[\vdots\]
+\begin{hazel}
+let str_of_lst = 
+	@\lam @ns.{
+		case ns
+		| []      @\casearrow @ ""
+		| n :: [] @\casearrow @ str_of_int n		
+		| n :: ns @\casearrow @ str_of_int n ++ "," ++ str_of_lst ns
+		end
+	}
+in
+<c>_</c>
+\end{hazel}
+	\begin{tabular}{|p{\linewidth}}
+	At this point, we realize that we would like bookend the return string
+	with brackets. This requires refactoring the current body of
+	\texttt{str\_of\_lst} into its own internal recursive helper function.
+	We add a new line above the \texttt{case} expression and create a
+	\texttt{let} line.
+	\end{tabular}
+\begin{hazel}
+let str_of_lst = 
+	@\lam @ns.{
+		let <h>_</h> = <h>_</h> [in]
+		case ns
+		| []      @\casearrow @ ""
+		| n :: [] @\casearrow @ str_of_int n		
+		| n :: ns @\casearrow @ str_of_int n ++ "," ++ str_of_lst ns
+		end
+	}
+in
+_
+\end{hazel}
+	\begin{tabular}{|p{\linewidth}}
+	We have triggered \emph{delimited selection mode}. \Hazel has detected
+	ambiguity in our intent: should the \texttt{case} expression be part of
+	the defining expression of the \texttt{let} line we just constructed,
+	or should it remain in the subsequent body expression? Such ambiguities
+	can be reduced to ambiguity in where to place a syntactic delimiter
+	of the node being constructed. In this case, the delimiter in question is
+	\texttt{in} on Line 3. In delimited selection mode, the left and right
+	keys cycle through viable placements of the delimiter in question.
+	We want the \texttt{case} expression to be in the defining expression,
+	i.e., we want the \texttt{in} delimiter to come after the \texttt{case}
+	expression, so we press right to see the next viable position.
+	\end{tabular}
+\begin{hazel}
+let str_of_lst = 
+	@\lam @ns.{
+		let <h>_</h> =
+			case ns
+			| []      @\casearrow @ ""
+			| n :: [] @\casearrow @ str_of_int n		
+			| n :: ns @\casearrow @ str_of_int n ++ "," ++ str_of_lst ns
+			end
+		[in]
+		<h>_</h>
+	}
+in
+_
+\end{hazel}
+	\begin{tabular}{|p{\linewidth}}
+	The \texttt{case} expression has filled the empty hole previously in 
+	the defining expression, and a new empty hole has been generated as the
+	new body expression on Line 10.
+	\end{tabular}
+\begin{hazel}
+let str_of_lst = 
+	@\lam @ns.{
+		let <h>_</h> =
+			case ns
+			| []      @\casearrow @ ""
+			| n :: [] @\casearrow @ str_of_int n		
+			| n :: ns @\casearrow @ str_of_int n ++ "," ++ str_of_lst ns
+			end
+		[in]
+		<h>_</h>
+	}
+in
+_
+\end{hazel}
+	\begin{tabular}{|p{\linewidth}}
+	This is the position we want, so we press Enter to return to
+	the usual editing mode.
+	\end{tabular}
+\begin{hazel}
+let str_of_lst = 
+	@\lam @ns.{
+		let <h>_</h> =
+			case ns
+			| []      @\casearrow @ ""
+			| n :: [] @\casearrow @ str_of_int n		
+			| n :: ns @\casearrow @ str_of_int n ++ "," ++ str_of_lst ns
+			end
+		|in
+		<h>_</h>
+	}
+in
+_
+\end{hazel}
+
+\begin{hazel}
+let str_of_lst =
 	@\lam @ns.{
 		let str_of_elems = 
 			@\lam @ns.{
@@ -129,14 +369,30 @@ let str_of_lst : List(Num) @\fnarrow @ String =
 				| n :: [] @\casearrow @ str_of_int n                           |
 				| n :: ns @\casearrow @ str_of_int n ++ "," ++ str_of_elems ns |
 				end
-			} 
+			}
 		in
 		"[" ++ str_of_elems ns ++ "]"
 	}
 in
-/h/_/h/
-\end{lstlisting}
-\end{minipage}
+<h>_</h>
+\end{hazel}
+
+guided by overall text like experience, you want to operate on a tree like structure but enable linear operations as suggested by the layout, doesn't preclude tree operations or tree affordances/signifiers
+\begin{itemize}
+\item text-like cursor, single point of focus, differs from POPL 17 paper
+\item deletion
+\item operator sequences
+\item selection model + cut/copy
+\item line items (linearing tree)
+\item keywords
+\item tabbing between holes
+\item cursor inspector, what is highlighted under the cursor, what is the mapping between text cursor and semantic cursor
+\item transitory edit mode
+\item shifting parentheses/delimiters (mark shift points, highlight points with least errors (maybe a single highlighted suggestion to minimize clutter)?)
+\item maybe swapping
+\item maybe mention inlining context inspector, put live values in side of code
+\end{itemize}
+
 
 
 \begin{figure}
@@ -188,24 +444,6 @@ _
 \end{minipage}
 
 \newpage
-
-\section{Example-Driven Overview} \label{sec:example}
-
-guided by overall text like experience, you want to operate on a tree like structure but enable linear operations as suggested by the layout, doesn't preclude tree operations or tree affordances/signifiers
-\begin{itemize}
-\item text-like cursor, single point of focus, differs from POPL 17 paper
-\item deletion
-\item operator sequences
-\item selection model + cut/copy
-\item line items (linearing tree)
-\item keywords
-\item tabbing between holes
-\item cursor inspector, what is highlighted under the cursor, what is the mapping between text cursor and semantic cursor
-\item transitory edit mode
-\item shifting parentheses/delimiters (mark shift points, highlight points with least errors (maybe a single highlighted suggestion to minimize clutter)?)
-\item maybe swapping
-\item maybe mention inlining context inspector, put live values in side of code
-\end{itemize}
 
 \section{Related Work} \label{sec:related-work}
 

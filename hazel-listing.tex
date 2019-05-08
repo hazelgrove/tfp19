@@ -11,8 +11,11 @@
 	morecomment=[l]{--},
 }
 \usepackage{color}
-\definecolor{comment}{RGB}{128,128,128}
-\definecolor{stringColor}{RGB}{147,112,219}
+\definecolor{FrameColor}{RGB}{128,128,128}
+\definecolor{CommentColor}{RGB}{128,128,128}
+\definecolor{StringColor}{RGB}{147,112,219}
+\definecolor{HoleColor}{RGB}{160,64,160}
+\definecolor{CursorColor}{RGB}{229,255,229}
 \lstset{%
 	language=hazel,
 	numbers=left,
@@ -20,15 +23,16 @@
 	basicstyle=\small\ttfamily\linespread{0.8},
 	tabsize=2,
 	keywordstyle=\bfseries,
-	commentstyle=\bfseries\color{comment},
+	commentstyle=\bfseries\color{CommentColor},
 	morestring=[d]{"},
-	stringstyle=\color{stringColor},
+	stringstyle=\color{StringColor},
 	showstringspaces=false,
 	mathescape,
 	frame=trbl,
-	rulecolor=\color{comment},
+	rulecolor=\color{FrameColor},
 	escapeinside={@}{@},
-	moredelim=[is][\ColorBox{red}]{/h/}{/h/},
+	moredelim=*[is][\bfseries\textcolor{HoleColor}]{<h>}{</h>},
+	moredelim=*[is][\ColorBox{CursorColor}]{<c>}{</c>},
 }
 
 \usepackage{bm}
@@ -50,3 +54,5 @@
 \draw[green,dashed]([shift={(-2pt,1.5ex)}]mk1)rectangle([shift={(1pt,-0.5ex)}]mk2);
 \end{tikzpicture}
 }
+
+\lstnewenvironment{hazel}{}{}
