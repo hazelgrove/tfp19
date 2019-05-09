@@ -28,7 +28,7 @@
 
 \begin{document}
 %
-\title{Contribution Title\thanks{Supported by organization x.}}
+\title{Flexible Structure Editing via Node Staging}
 %
 %\titlerunning{Abbreviated paper title}
 % If the paper title is too long for the running head, you can set
@@ -38,7 +38,7 @@
 Cyrus Omar\inst{2} \and
 R.~Benjamin Shapiro\inst{1}}
 %
-\authorrunning{F. Author et al.}
+\authorrunning{David Moon, Cyrus Omar, and R.~Benjamin Shapiro}
 % First names are abbreviated in the running head.
 % If there are more than two authors, 'et al.' is used.
 %
@@ -61,42 +61,57 @@ to use.
 We present the structure editor design of \Hazel, a live functional programming
 environment. \Hazel's type-aware edit actions and execution semantics for incomplete programs ensure that every reachable edit state is not only syntactically well-formed, but also statically and dynamically well-defined. This unique invariant of \Hazel adds new motivation to improve the ergonomics of structure editing. 
 
-In our effort to do so, we incorporate a novel \emph{delimited selection mode} to resolve ambiguous user intent when wrapping and unwrapping parent nodes around their children. Just as code completion menus facilitate exploration of valid token completions, delimited selection mode facilitates exploration of valid placements of a syntactic delimiter. It also makes it easy to preserve children nodes when removing their parent. We motivate and describe our design choices, compare our design to prior work, and describe our plan for user evaluation.
+In our effort to do so, we incorporate a novel \emph{node staging} mode to resolve ambiguous user intent when wrapping and unwrapping parent nodes around their children. Just as code completion menus facilitate exploration of valid token completions, node staging facilitates exploration of valid placements of a node's syntactic delimiters. It also makes it easy to preserve children nodes when removing their parent. We motivate and describe our design choices, compare our design to prior work, and describe our plan for user evaluation.
 %key points
 %\begin{itemize}
 %\item in progress of scaling up usability of core Hazelnut calculus
 %\item structure editing eliminates syntax errors, in Hazel enables live computation
 %\item we propose a design that marries affordances of linear text and structure trees
 %\end{itemize}
-\keywords{First keyword  \and Second keyword \and Another keyword.}
+%\keywords{First keyword  \and Second keyword \and Another keyword.}
 \end{abstract}
 %
 %
 %
 \section{Introduction}
+Plain text dominates as the universal format for computer programs. Although the simplicity and generality of text are extremely useful, the benefits come at 
+some costs. For novice programmers, the 
+unrestricted nature of text leaves room for syntax errors that make learning how to program 
+more difficult \cite{text_vs_frame}. Plain text also
+complicates the design of language-aware editor services. Because many sequences of 
+characters do not correspond to meaningful programs, these services flicker in and out of 
+availability, or their implementations must deploy \emph{ad hoc} heuristics, e.g., by using 
+whitespace to guess intent 
+\cite{error_recovery_generated_parser,rapid_feedback_generated_parser}.
+
+These issues have motivated a long line of research into \emph{structure editors}, i.e., 
+program editors where every edit state corresponds to a program structure \cite{cornell}.
+Structure editors limit unstructured text editing to within well-formed structures and 
+otherwise rely on operations that create and manipulate structural components.
+In so doing, they avoid classes of syntax errors that may otherwise arise in plain text. This 
+has proven useful for teaching children how to program, as demonstrated by the popularity of 
+the structure editor Scratch \cite{scratch}. 
+
+Recent work shows structure editing can support additional powerful advantages. The Jetbrains MPS language workbench uses a structure editor to enable clean composition of domain-specific languages as well as end-user-friendly graphical notations \cite{lessons_learned_mps}. Meanwhile, the functional programming language and environment \Hazel uses structure editing to enforce \emph{semantic} validity. Uniquely, \Hazel's type-aware edit actions and execution semantics for incomplete programs ensure that every reachable edit state is not only syntactically well-formed, but also statically and dynamically well-defined \cite{hazelnut,hazelnut_live}.
+
+Despite all these advantages, structure editors have not achieved widespread adoption. They do not integrate well with existing toolchains built for the plain text format \cite{towards_user_friendly_projectional_editors}, and they are known for usability issues such as being hard to learn \cite{towards_user_friendly_projectional_editors,efficiency_of_projectional_editing} and scaling poorly to large programs \cite{blocks_at_your_fingertips}. In this paper, we focus our attention on the latter problem of usability.
+
+We present the structure editor design of \Hazel. Our design improves on prior work by incorporating a novel \emph{node staging} mode that resolves ambiguous user intent when wrapping and unwrapping parent nodes around their children. 
+
+\parahead{Paper Outline} We begin in Sec.~\ref{sec:related-work} by reviewing prior work on improving the usability of structure editors. This review motivates our design principles, which we state in Sec.~\ref{sec:design} followed by an example-driven overview of \Hazel's structure editor. Sec.~\ref{sec:conclusion} describes future work and concludes.
+
+\section{Related Work} \label{sec:related-work}
 \begin{itemize}
-	\item pros of structure editing
-		\begin{itemize}
-			\item cognitive benefits for novices, e.g., Scratch
-			\item language composition, e.g., MPS/mbeddr
-			\item true liveness, e.g., \Hazel
-		\end{itemize}
-	\item yet not widely adopted
-		\begin{itemize}
-			\item tool integration
-			\item usability
-			\item in this paper, we focus on usability
-		\end{itemize}
 	\item prior work on improving usability for inputting sequences of infix operators
   	\begin{itemize}
-  		\item early structure editors like Cornell Synthesizer stepped around issue of infix operator sequences by resorting to text editing at leaves
+  		\item early structure editors like Cornell Synthesizer \cite{cornell} stepped around issue of infix operator sequences by resorting to text editing at leaves
   		\item other editors leverage a form of online precedence parsing to restructure the tree as needed
   	\end{itemize}
 	\item comparatively, little innovation on interface for complex node construction and removal, that is, creating a new node that wraps around existing code, and removing a node while preserving or moving its children
 		\begin{itemize}
 			\item we believe interface for such operations in today's structure editors is key contributor to users' negative perceptions of structure editing
 		\end{itemize}
-	\item in a controlled experiment comparing user efficiency for MPS vs a text editor, Berger et al.~\todo{cite} observe that novice users of structure editors perceive selection as inaccurate compared to other operations, and that \emph{both} novice and proficient users of structure editors perceive deletion as inaccurate compared to other operations.
+	\item in a controlled experiment comparing user efficiency for MPS vs a text editor \cite{efficiency_of_projectional_editing}, Berger et al.~observe that novice users of structure editors perceive selection as inaccurate compared to other operations, and that \emph{both} novice and proficient users of structure editors perceive deletion as inaccurate compared to other operations.
 		\begin{itemize}
 			\item responses to a post-survey questionnaire reveal that structure editor users felt that they often deleted more than they expected, motivating our desire for a better interface for complex deletions
 		\end{itemize}
@@ -106,33 +121,69 @@ In our effort to do so, we incorporate a novel \emph{delimited selection mode} t
 			\item thus, usability issues for selection affect node construction as well
 		\end{itemize}
 	\item additionally, we conjecture that node construction is awkward for novice users of structure editors because it inverts the usual order of operations when constructing nodes in text editors
-		\begin{itemize}
-			\item yada yada \todo{coalesce this paragraph with previous paragraph}
-		\end{itemize}
+%		\begin{itemize}
+%			\item yada yada \todo{coalesce this paragraph with previous paragraph}
+%		\end{itemize}
 \end{itemize}
 
-\parahead{Paper Outline} yo
+
+%\begin{itemize}
+%\item A comparative study of moded and modeless text editing by experienced editor users by Poller \& Garter \url{https://dl.acm.org/citation.cfm?id=801603}
+%\item A personal history of modeless text editing and cut/copy-paste by Tesler \url{https://dl.acm.org/citation.cfm?id=2212896}
+%\item The Smalltalk Environment by Tesler \url{https://tech-insider.org/star/research/acrobat/8108-a.pdf}
+%\item Modeling Human-Machine Systems: On Modes, Error, and Patterns of Interaction by Degani % https://ti.arc.nasa.gov/m/profile/adegani/Degani_Thesis.pdf
+%\item Modes in User Interfaces: When They Help and When They Hurt Users \url{https://www.nngroup.com/articles/modes/}
+%\item The keystroke-level model for user performance time with interactive systems by Card et al. \url{https://dl.acm.org/citation.cfm?doid=358886.358895}
+%\item ParEdit \url{https://www.emacswiki.org/emacs/ParEdit}
+%\end{itemize}
+
+
+\section{Design} \label{sec:design}
+
+\subsection{Principles}
+
+(WIP list)
 \begin{itemize}
-\item Sec.~\ref{sec:example} gives an example-driven overview of \Hazel's structure editor design
-\item Sec.~\ref{sec:related-work} compares our structure editor design with other designs
-\item Sec.~\ref{sec:conclusion} describes future work and concludes
+\item Users should be able to hold Backspace/Delete to delete everything before/after the cursor.
+\item Users should be able to perform arbitrary deletions.
+\item Deletions should be clearly indicated before they happen.
+\item Users should be able to choose the node to construct before choosing its children.
+\item Users should never have to follow two moving parts.
 \end{itemize}
 
-\section{Design} \label{sec:example}
+guided by overall text like experience, you want to operate on a tree like structure but enable linear operations as suggested by the layout, doesn't preclude tree operations or tree affordances/signifiers
+\begin{itemize}
+\item text-like cursor, single point of focus, differs from POPL 17 paper
+\item deletion
+\item operator sequences
+\item selection model + cut/copy
+\item line items (linearing tree)
+\item keywords
+\item tabbing between holes
+\item cursor inspector, what is highlighted under the cursor, what is the mapping between text cursor and semantic cursor
+\item transitory edit mode
+\item shifting parentheses/delimiters (mark shift points, highlight points with least errors (maybe a single highlighted suggestion to minimize clutter)?)
+\item maybe swapping
+\item maybe mention inlining context inspector, put live values in side of code
+\end{itemize}
+
+
+
 
 \subsection{Example}
 
-We begin with an example-driven overview of \Hazel's editing mechanics.
+We now provide an example-driven overview of \Hazel's editing mechanics.
 We walk through how one might implement in \Hazel the function \texttt{str\_of\_list},
 which takes a list of numbers and returns its string representation. We
-elide most steps and focus on a few interesting edit transitions.
+elide most steps and focus on a few interesting edit transitions. We refer
+back to our design principles as they are demonstrated concretely.
 
 In the rest of this section, each consecutive pair of programs connected
 visually by a line represents a single edit transition. Text between the
 start and end state of each edit describes the edit and relevant features of
 \Hazel. Elided steps are denoted by ellipses between pairs of programs.
-\todo{add mention of cursor inspector, other editor services we are omitting
-to focus on editing mechanics}
+%\todo{add mention of cursor inspector, other editor services we are omitting
+%to focus on editing mechanics}
 
 \noindent
 \begin{hazel}
@@ -195,7 +246,7 @@ let str_of_lst = @\lam @ns.{<c>case</c>} in
 let str_of_lst = 
 	@\lam @ns.{
 		case <c>_</c>
-		| <h>_</h> @\casearrow @ <h>_</h> |
+		| <h>_</h> @\casearrow @ <h>_</h>
 		end
 	}
 in
@@ -292,13 +343,13 @@ in
 _
 \end{hazel}
 	\begin{tabular}{|p{\linewidth}}
-	We have triggered \emph{delimited selection mode}. \Hazel has detected
+	We have triggered \emph{node staging} mode. \Hazel has detected
 	ambiguity in our intent: should the \texttt{case} expression be part of
 	the defining expression of the \texttt{let} line we just constructed,
 	or should it remain in the subsequent body expression? Such ambiguities
 	can be reduced to ambiguity in where to place a syntactic delimiter
 	of the node being constructed. In this case, the delimiter in question is
-	\texttt{in} on Line 3. In delimited selection mode, the left and right
+	\texttt{in} on Line 3. In node staging mode, the left and right
 	keys cycle through viable placements of the delimiter in question.
 	We want the \texttt{case} expression to be in the defining expression,
 	i.e., we want the \texttt{in} delimiter to come after the \texttt{case}
@@ -365,9 +416,9 @@ let str_of_lst =
 		let str_of_elems = 
 			@\lam @ns.{
 				case ns
-				| []      @\casearrow @ ""                                     |
-				| n :: [] @\casearrow @ str_of_int n                           |
-				| n :: ns @\casearrow @ str_of_int n ++ "," ++ str_of_elems ns |
+				| []      @\casearrow @ ""                                     
+				| n :: [] @\casearrow @ str_of_int n                           
+				| n :: ns @\casearrow @ str_of_int n ++ "," ++ str_of_elems ns 
 				end
 			}
 		in
@@ -377,170 +428,131 @@ in
 <h>_</h>
 \end{hazel}
 
-guided by overall text like experience, you want to operate on a tree like structure but enable linear operations as suggested by the layout, doesn't preclude tree operations or tree affordances/signifiers
-\begin{itemize}
-\item text-like cursor, single point of focus, differs from POPL 17 paper
-\item deletion
-\item operator sequences
-\item selection model + cut/copy
-\item line items (linearing tree)
-\item keywords
-\item tabbing between holes
-\item cursor inspector, what is highlighted under the cursor, what is the mapping between text cursor and semantic cursor
-\item transitory edit mode
-\item shifting parentheses/delimiters (mark shift points, highlight points with least errors (maybe a single highlighted suggestion to minimize clutter)?)
-\item maybe swapping
-\item maybe mention inlining context inspector, put live values in side of code
-\end{itemize}
 
-
-
-\begin{figure}
-\begin{lstlisting}
-type Tm         -- term
-type Op         -- operator
-type Seq =      -- sequence of infix operators
-| TmOpTm Tm Op Tm
-| SeqOpTm OpSeq Op Tm
-	
-type SeqSurround =                  -- Seq zipper context
-| EmptyPrefix SeqSuffix             --  _ + tm + tm + ...
-| EmptySuffix SeqPrefix             --  ... + tm + tm + _
-| BothNonEmpty SeqPrefix SeqSuffix  --  ... + tm + _ + tm + ...
-and SeqPrefix =
-| TmPrefix Tm Op
-| SeqPrefix Seq Op
-and SeqSuffix =
-| TmSuffix Op Tm
-| SeqSuffix Op Seq
-\end{lstlisting}
-\end{figure}
-
-\begin{minipage}{\linewidth}
-\begin{lstlisting}
-let next_tm : (Tm, SeqSurround) @\fnarrow @ (Tm, SeqSurround) =
-	@\lam @(curr_tm, curr_surround).
-		case surround
-		| EmptySuffix prefix @\casearrow @
-			-- reader, look here --
-			let ( new_tm, new_suffix ) =
-				case prefix
-				| TmPrefix new_tm op @\casearrow @
-					let new_suffix = TmSuffix op curr_tm in
-					( new_tm, new_suffix )
-				| SeqPrefix seq op =>
-					let ( new_z, suffix ) = place_cursor_seq seq in
-					let new_suffix =
-						append_tm_to_suffix suffix op (erase z)
-					in
-					( new_tm, new_suffix )
-				end
-			in
-			@\myboxs{}@( new_z, EmptyPrefix new_suffix )@\myboxe{}@
-		end
-in
-_
-\end{lstlisting}
-\end{minipage}
-
-\newpage
-
-\section{Related Work} \label{sec:related-work}
-
-\begin{itemize}
-\item The Cornell Program Synthesizer: A Syntax-Directed Programming Environment by Teitelbaum \& Reps \url{https://core.ac.uk/download/pdf/21750999.pdf}
-\item The Scratch Programming Language and Environment by Maloney et al. \url{https://dl.acm.org/citation.cfm?doid=1868358.1868363}
-\item Design Requirements for More Flexible Structured Editors from a Study of Programmers' Text Editing by Ko et al. \url{http://www.cs.cmu.edu/~ajko/papers/Ko2005TextEditing.pdf}
-\item Modeless Structure Editing by Sufrin \& de Moor \url{http://www.cs.ox.ac.uk/bernard.sufrin/edit.pdf}
-\item A comparative study of moded and modeless text editing by experienced editor users by Poller \& Garter \url{https://dl.acm.org/citation.cfm?id=801603}
-\item A personal history of modeless text editing and cut/copy-paste by Tesler \url{https://dl.acm.org/citation.cfm?id=2212896}
-\item The Smalltalk Environment by Tesler \url{https://tech-insider.org/star/research/acrobat/8108-a.pdf}
-\item Modeling Human-Machine Systems: On Modes, Error, and Patterns of Interaction by Degani % https://ti.arc.nasa.gov/m/profile/adegani/Degani_Thesis.pdf
-\item Modes in User Interfaces: When They Help and When They Hurt Users \url{https://www.nngroup.com/articles/modes/}
-\item The keystroke-level model for user performance time with interactive systems by Card et al. \url{https://dl.acm.org/citation.cfm?doid=358886.358895}
-\item Towards User-Friendly Projectional Editors by Voelter et al. \url{https://voelter.de/data/pub/projectionalEditing-sle2014.pdf}
-\item Efficiency of Projectional Editing: A Controlled Experiment \url{https://voelter.de/data/pub/fse2016-projEditing.pdf}
-\item Efficient development of consistent projectional editors using grammar cells \url{https://dl.acm.org/citation.cfm?doid=2997364.2997365}
-\item ParEdit \url{https://www.emacswiki.org/emacs/ParEdit}
-
-\item Deuce \url{https://dl.acm.org/citation.cfm?id=3180155.3180165}
-\item Hazelnut \url{https://dl.acm.org/citation.cfm?id=3009900}
-\item Hazelnut Live \url{https://dl.acm.org/citation.cfm?id=3290327}
-\end{itemize}
+%\begin{figure}
+%\begin{lstlisting}
+%type Tm         -- term
+%type Op         -- operator
+%type Seq =      -- sequence of infix operators
+%| TmOpTm Tm Op Tm
+%| SeqOpTm OpSeq Op Tm
+%	
+%type SeqSurround =                  -- Seq zipper context
+%| EmptyPrefix SeqSuffix             --  _ + tm + tm + ...
+%| EmptySuffix SeqPrefix             --  ... + tm + tm + _
+%| BothNonEmpty SeqPrefix SeqSuffix  --  ... + tm + _ + tm + ...
+%and SeqPrefix =
+%| TmPrefix Tm Op
+%| SeqPrefix Seq Op
+%and SeqSuffix =
+%| TmSuffix Op Tm
+%| SeqSuffix Op Seq
+%\end{lstlisting}
+%\end{figure}
+%
+%\begin{minipage}{\linewidth}
+%\begin{lstlisting}
+%let next_tm : (Tm, SeqSurround) @\fnarrow @ (Tm, SeqSurround) =
+%	@\lam @(curr_tm, curr_surround).
+%		case surround
+%		| EmptySuffix prefix @\casearrow @
+%			-- reader, look here --
+%			let ( new_tm, new_suffix ) =
+%				case prefix
+%				| TmPrefix new_tm op @\casearrow @
+%					let new_suffix = TmSuffix op curr_tm in
+%					( new_tm, new_suffix )
+%				| SeqPrefix seq op =>
+%					let ( new_z, suffix ) = place_cursor_seq seq in
+%					let new_suffix =
+%						append_tm_to_suffix suffix op (erase z)
+%					in
+%					( new_tm, new_suffix )
+%				end
+%			in
+%			@\myboxs{}@( new_z, EmptyPrefix new_suffix )@\myboxe{}@
+%		end
+%in
+%_
+%\end{lstlisting}
+%\end{minipage}
 
 \section{Conclusion} \label{sec:conclusion}
 
-\newpage
-\subsection{A Subsection Sample}
-Please note that the first paragraph of a section or subsection is
-not indented. The first paragraph that follows a table, figure,
-equation etc. does not need an indent, either.
+This summer, we will finish our implementation and evaluate our design via a user study.
+We plan on recruiting participants from the Recurse Center, a self-directed educational retreat for programmers in New York City. We plan on having users walk through a variety of implementation and refactoring exercises within \Hazel, then qualitatively analyzing their edit logs and subjective responses.
 
-Subsequent paragraphs, however, are indented.
-
-\subsubsection{Sample Heading (Third Level)} Only two levels of
-headings should be numbered. Lower level headings remain unnumbered;
-they are formatted as run-in headings.
-
-\paragraph{Sample Heading (Fourth Level)}
-The contribution should contain no more than four levels of
-headings. Table~\ref{tab1} gives a summary of all heading levels.
-
-\begin{table}
-\caption{Table captions should be placed above the
-tables.}\label{tab1}
-\begin{tabular}{|l|l|l|}
-\hline
-Heading level &  Example & Font size and style\\
-\hline
-Title (centered) &  {\Large\bfseries Lecture Notes} & 14 point, bold\\
-1st-level heading &  {\large\bfseries 1 Introduction} & 12 point, bold\\
-2nd-level heading & {\bfseries 2.1 Printing Area} & 10 point, bold\\
-3rd-level heading & {\bfseries Run-in Heading in Bold.} Text follows & 10 point, bold\\
-4th-level heading & {\itshape Lowest Level Heading.} Text follows & 10 point, italic\\
-\hline
-\end{tabular}
-\end{table}
-
-
-\noindent Displayed equations are centered and set on a separate
-line.
-\begin{equation}
-x + y = z
-\end{equation}
-Please try to avoid rasterized images for line-art diagrams and
-schemas. Whenever possible, use vector graphics instead (see
-Fig.~\ref{fig1}).
-
-\begin{figure}
-\includegraphics[width=\textwidth]{fig1.eps}
-\caption{A figure caption is always placed below the illustration.
-Please note that short captions are centered, while long ones are
-justified by the macro package automatically.} \label{fig1}
-\end{figure}
-
-\begin{theorem}
-This is a sample theorem. The run-in heading is set in bold, while
-the following text appears in italics. Definitions, lemmas,
-propositions, and corollaries are styled the same way.
-\end{theorem}
+%\newpage
+%\subsection{A Subsection Sample}
+%Please note that the first paragraph of a section or subsection is
+%not indented. The first paragraph that follows a table, figure,
+%equation etc. does not need an indent, either.
 %
-% the environments 'definition', 'lemma', 'proposition', 'corollary',
-% 'remark', and 'example' are defined in the LLNCS documentclass as well.
+%Subsequent paragraphs, however, are indented.
 %
-\begin{proof}
-Proofs, examples, and remarks have the initial word in italics,
-while the following text appears in normal font.
-\end{proof}
-For citations of references, we prefer the use of square brackets
-and consecutive numbers. Citations using labels or the author/year
-convention are also acceptable. The following bibliography provides
-a sample reference list with entries for journal
-articles~\cite{ref_article1}, an LNCS chapter~\cite{ref_lncs1}, a
-book~\cite{ref_book1}, proceedings without editors~\cite{ref_proc1},
-and a homepage~\cite{ref_url1}. Multiple citations are grouped
-\cite{ref_article1,ref_lncs1,ref_book1},
-\cite{ref_article1,ref_book1,ref_proc1,ref_url1}.
+%\subsubsection{Sample Heading (Third Level)} Only two levels of
+%headings should be numbered. Lower level headings remain unnumbered;
+%they are formatted as run-in headings.
+%
+%\paragraph{Sample Heading (Fourth Level)}
+%The contribution should contain no more than four levels of
+%headings. Table~\ref{tab1} gives a summary of all heading levels.
+%
+%\begin{table}
+%\caption{Table captions should be placed above the
+%tables.}\label{tab1}
+%\begin{tabular}{|l|l|l|}
+%\hline
+%Heading level &  Example & Font size and style\\
+%\hline
+%Title (centered) &  {\Large\bfseries Lecture Notes} & 14 point, bold\\
+%1st-level heading &  {\large\bfseries 1 Introduction} & 12 point, bold\\
+%2nd-level heading & {\bfseries 2.1 Printing Area} & 10 point, bold\\
+%3rd-level heading & {\bfseries Run-in Heading in Bold.} Text follows & 10 point, bold\\
+%4th-level heading & {\itshape Lowest Level Heading.} Text follows & 10 point, italic\\
+%\hline
+%\end{tabular}
+%\end{table}
+%
+%
+%\noindent Displayed equations are centered and set on a separate
+%line.
+%\begin{equation}
+%x + y = z
+%\end{equation}
+%Please try to avoid rasterized images for line-art diagrams and
+%schemas. Whenever possible, use vector graphics instead (see
+%Fig.~\ref{fig1}).
+%
+%\begin{figure}
+%\includegraphics[width=\textwidth]{fig1.eps}
+%\caption{A figure caption is always placed below the illustration.
+%Please note that short captions are centered, while long ones are
+%justified by the macro package automatically.} \label{fig1}
+%\end{figure}
+%
+%\begin{theorem}
+%This is a sample theorem. The run-in heading is set in bold, while
+%the following text appears in italics. Definitions, lemmas,
+%propositions, and corollaries are styled the same way.
+%\end{theorem}
+%%
+%% the environments 'definition', 'lemma', 'proposition', 'corollary',
+%% 'remark', and 'example' are defined in the LLNCS documentclass as well.
+%%
+%\begin{proof}
+%Proofs, examples, and remarks have the initial word in italics,
+%while the following text appears in normal font.
+%\end{proof}
+%For citations of references, we prefer the use of square brackets
+%and consecutive numbers. Citations using labels or the author/year
+%convention are also acceptable. The following bibliography provides
+%a sample reference list with entries for journal
+%articles~\cite{ref_article1}, an LNCS chapter~\cite{ref_lncs1}, a
+%book~\cite{ref_book1}, proceedings without editors~\cite{ref_proc1},
+%and a homepage~\cite{ref_url1}. Multiple citations are grouped
+%\cite{ref_article1,ref_lncs1,ref_book1},
+%\cite{ref_article1,ref_book1,ref_proc1,ref_url1}.
 %
 % ---- Bibliography ----
 %
@@ -550,25 +562,58 @@ and a homepage~\cite{ref_url1}. Multiple citations are grouped
 % \bibliographystyle{splncs04}
 % \bibliography{mybibliography}
 %
-\begin{thebibliography}{8}
-\bibitem{ref_article1}
-Author, F.: Article title. Journal \textbf{2}(5), 99--110 (2016)
+\begin{thebibliography}{88}
+\bibitem{design_requirements}
+Andrew J. Ko, Htet Htet Aung, and Brad A. Myers. 2005. Design requirements for more flexible structured editors from a study of programmers' text editing. In CHI '05 Extended Abstracts on Human Factors in Computing Systems (CHI EA '05). ACM, New York, NY, USA, 1557-1560. DOI=http://dx.doi.org/10.1145/1056808.1056965
 
-\bibitem{ref_lncs1}
-Author, F., Author, S.: Title of a proceedings paper. In: Editor,
-F., Editor, S. (eds.) CONFERENCE 2016, LNCS, vol. 9999, pp. 1--13.
-Springer, Heidelberg (2016). \doi{10.10007/1234567890}
 
-\bibitem{ref_book1}
-Author, F., Author, S., Author, T.: Book title. 2nd edn. Publisher,
-Location (1999)
+\bibitem{cornell}
+Tim Teitelbaum and Thomas Reps. 1981. The Cornell program synthesizer: a syntax-directed programming environment. Commun. ACM 24, 9 (September 1981), 563-573. DOI=http://dx.doi.org/10.1145/358746.358755
 
-\bibitem{ref_proc1}
-Author, A.-B.: Contribution title. In: 9th International Proceedings
-on Proceedings, pp. 1--2. Publisher, Location (2010)
+\bibitem{scratch}
+Mitchel Resnick, John Maloney, Andrés Monroy-Hernández, Natalie Rusk, Evelyn Eastmond, Karen Brennan, Amon Millner, Eric Rosenbaum, Jay Silver, Brian Silverman, and Yasmin Kafai. 2009. Scratch: programming for all. Commun. ACM 52, 11 (November 2009), 60-67. DOI: https://doi.org/10.1145/1592761.1592779
 
-\bibitem{ref_url1}
-LNCS Homepage, \url{http://www.springer.com/lncs}. Last accessed 4
-Oct 2017
+\bibitem{modeless_structure_editing}
+Bernard Sufrin and Oege de Moor. Modeless structure editing. In Proceedings of the Oxford-Microsoft Symposium in Celebration of the work of Tony Hoare, 1999.
+
+\bibitem{towards_user_friendly_projectional_editors}
+Markus Voelter, Janet Siegmund, Thorsten Berger, and Bernd Kolb. Towards User-Friendly Projectional Editors. In International Conference on Software Language Engineering (SLE), 2014.
+
+\bibitem{efficiency_of_projectional_editing}
+Thorsten Berger, Markus Völter, Hans Peter Jensen, Taweesap Dangprasert, and Janet Siegmund. 2016. Efficiency of projectional editing: a controlled experiment. In Proceedings of the 2016 24th ACM SIGSOFT International Symposium on Foundations of Software Engineering (FSE 2016). ACM, New York, NY, USA, 763-774. DOI: https://doi.org/10.1145/2950290.2950315
+
+\bibitem{grammar_cells}
+Markus Voelter, Tamás Szabó, Sascha Lisson, Bernd Kolb, Sebastian Erdweg, and Thorsten Berger. 2016. Efficient development of consistent projectional editors using grammar cells. In Proceedings of the 2016 ACM SIGPLAN International Conference on Software Language Engineering (SLE 2016). ACM, New York, NY, USA, 28-40. DOI: https://doi.org/10.1145/2997364.2997365
+
+\bibitem{its_alive}
+Sebastian Burckhardt, Manuel Fahndrich, Peli de Halleux, Sean McDirmid, Michal Moskal, Nikolai Tillmann, and Jun Kato. 2013. It's alive! continuous feedback in UI programming. SIGPLAN Not. 48, 6 (June 2013), 95-104. DOI: https://doi.org/10.1145/2499370.2462170
+
+\bibitem{deuce}
+Brian Hempel, Justin Lubin, Grace Lu, and Ravi Chugh. 2018. Deuce: a lightweight user interface for structured editing. In Proceedings of the 40th International Conference on Software Engineering (ICSE '18). ACM, New York, NY, USA, 654-664. DOI: https://doi.org/10.1145/3180155.3180165
+
+\bibitem{hazelnut}
+Cyrus Omar, Ian Voysey, Michael Hilton, Jonathan Aldrich, and Matthew A. Hammer. 2017. Hazelnut: a bidirectionally typed structure editor calculus. In Proceedings of the 44th ACM SIGPLAN Symposium on Principles of Programming Languages (POPL 2017). ACM, New York, NY, USA, 86-99. DOI: https://doi.org/10.1145/3009837.3009900
+
+\bibitem{hazelnut_live}
+Cyrus Omar, Ian Voysey, Ravi Chugh, and Matthew A. Hammer. 2019. Live functional programming with typed holes. Proc. ACM Program. Lang. 3, POPL, Article 14 (January 2019), 32 pages. DOI: https://doi.org/10.1145/3290327
+
+\bibitem{blocks_at_your_fingertips}
+Jens Monig, Yoshiki Ohshima, and John Maloney. 2015. Blocks at your fingertips: Blurring the line between blocks and text in GP. In Proceedings of the 2015 IEEE Blocks and Beyond Workshop (Blocks and Beyond) (BLOCKS AND BEYOND '15). IEEE Computer Society, Washington, DC, USA, 51-53. DOI=http://dx.doi.org/10.1109/BLOCKS.2015.7369001
+
+\bibitem{text_vs_frame}
+Amjad Altadmri, Michael Kölling, and Neil Christopher Charles Brown. 2016. The Cost of Syntax and How to Avoid It: Text versus Frame-Based Editing. In Computer Software and Applications Conference (COMPSAC).
+
+\bibitem{error_recovery_generated_parser}
+Maartje de Jonge, Emma Nilsson-Nyman, Lennart C. L. Kats, and Eelco Visser. 2009. Natural and flexible error recovery for generated parsers. In Proceedings of the Second international conference on Software Language Engineering (SLE'09), Mark Brand, Dragan Gašević, and Jeff Gray (Eds.). Springer-Verlag, Berlin, Heidelberg, 204-223. DOI: https://doi.org/10.1007/978-3-642-12107-4\_16 
+
+\bibitem{rapid_feedback_generated_parser}
+Lennart C.L. Kats, Maartje de Jonge, Emma Nilsson-Nyman, and Eelco Visser. 2009. Providing rapid feedback in generated modular language environments: adding error recovery to scannerless generalized-LR parsing. In Proceedings of the 24th ACM SIGPLAN conference on Object oriented programming systems languages and applications (OOPSLA '09). ACM, New York, NY, USA, 445-464. DOI: https://doi.org/10.1145/1640089.1640122
+
+\bibitem{eclipse_log}
+Y. S. Yoon and B. A. Myers. A longitudinal study of programmers’ backtracking. In IEEE Symposium on Visual Languages and Human- Centric Computing (VL/HCC), 2014.
+
+\bibitem{lessons_learned_mps}
+Voelter, M., Kolb, B., Szabó, T. et al. Softw Syst Model (2019) 18: 585. https://doi.org/10.1007/s10270-016-0575-4
+
 \end{thebibliography}
 \end{document}
